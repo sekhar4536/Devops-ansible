@@ -1,0 +1,15 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: provison db in ec2
+      ec2:
+        region: "{{ aws_region }}"
+        key_name: "{{ aws_key }}"
+        instance_type: t2.small
+        image: "{{ aws_ubuntu_ami }}"
+        wait: yes
+        vpc_subnet_id: "{{ aws_subnet }}"
+        private_ip: "{{ postgresql_ip }}"
+        group_id: "{{ aws_security_groups }}"
+        assign_public_ip: yes

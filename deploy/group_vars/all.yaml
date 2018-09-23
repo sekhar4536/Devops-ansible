@@ -1,0 +1,32 @@
+---
+ansible_python_interpreter: /usr/bin/python3
+
+postgresql_ip: 172.31.0.11
+postgresql_cidr: 172.31.0.0/20
+
+postgresql_users:
+  todo:
+    pw: protectme
+
+postgresql_databases:
+  todo:
+    owner: todo
+
+nodejs_version: '10.x'
+nodejs_install_npm_user: "ubuntu"
+
+todo_database_url: postgres://todo:protectme@{{ postgresql_ip }}/todo
+todo_app_source: ../todo/
+
+test_environment:
+  DATABASE_URL: "{{ todo_database_url }}"
+
+aws_region: us-east-1
+aws_lb_zones:
+  - us-east-1d
+aws_key: aws
+aws_ubuntu_ami: ami-aa2ea6d0
+aws_security_groups:
+  - sg-93af19eb
+  - sg-f0b8a284
+aws_subnet: subnet-6153e817

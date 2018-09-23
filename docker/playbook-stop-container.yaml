@@ -1,0 +1,15 @@
+- hosts: all
+  connection: local
+  tasks:
+    - name: todo container
+      docker_container:
+        name: todo
+        state: absent
+    - name: postgresql container
+      docker_container:
+        name: tododb
+        state: absent
+    - name: todo network
+      docker_network:
+        name: todo
+        state: absent

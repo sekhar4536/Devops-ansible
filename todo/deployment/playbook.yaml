@@ -1,0 +1,43 @@
+- hosts: all
+  connection: local
+  tasks:
+    - name: docker build and push
+      docker_image:
+        path: ..
+        name: alanhohn/todo
+        tag: "{{ tag }}"
+        push: yes
+    - name: storage
+      k8s_raw:
+        state: present
+        definition:
+          kind: PersistentVolumeClaim
+          apiVersion: v1
+          namespace: default
+          metadata:
+            name: todo-data
+          spec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+
+    - name: services
+      k8s_raw:
+        state: present
+        src: "{{ item }}"
+      with_items:
+        - db-service.yaml
+        - app-service.yaml
+
+    - name: database
+      k8s_raw:
+        state: present
+        definition: "{{ lookup('template', 'db.yaml') | from_yaml }}"
+
+    - name: application
+      k8s_raw:
+        state: present
+        definition: "{{ lookup('template', 'app.yaml') | from_yaml }}"

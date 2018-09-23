@@ -1,0 +1,2 @@
+gitlab_external_url: "http://gitlab/"
+gitlab_backup_keep_time: '604800'

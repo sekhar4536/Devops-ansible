@@ -1,0 +1,62 @@
+- hosts: all
+  connection: local
+  tasks:
+    - name: namespace
+      k8s_raw:
+        name: "{{ namespace }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+    - name: test pod
+      k8s_raw:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Pod
+          namespace: "{{ namespace }}"
+          metadata:
+            name: todo-test
+          spec:
+            containers:
+              - name: tododb
+                image: postgres:10.4
+                env:
+                - name: POSTGRES_USER
+                  value: "{{ postgresql_user }}"
+                - name: POSTGRES_PASSWORD
+                  value: "{{ postgresql_password }}"
+              - name: todo
+                image: alanhohn/todo:{{ tag }}
+                command: ["/bin/sleep", "3600"]
+                env:
+                - name: DATABASE_URL
+                  value: "{{ todo_database_url }}"
+    - name: database setup
+      command: kubectl exec -i -n {{ namespace }} -c todo todo-test npm run prestart
+      register: prestart_results
+      until: prestart_results.rc == 0
+      retries: 10
+      delay: 10
+      ignore_errors: yes
+    - name: run test
+      command: kubectl exec -i -n {{ namespace }} -c todo todo-test npm test
+      failed_when: False
+      register: test_results
+    - name: cleanup pod
+      k8s_raw:
+        kind: Pod
+        api_version: v1
+        namespace: "{{ namespace }}"
+        name: todo-test
+        state: absent
+    - name: cleanup namespace
+      k8s_raw:
+        kind: Namespace
+        api_version: v1
+        name: "{{ namespace }}"
+        state: absent
+    - name: display prestart results
+      debug: var=prestart_results
+    - name: display test results
+      debug: var=test_results
+      failed_when: test_results.rc != 0

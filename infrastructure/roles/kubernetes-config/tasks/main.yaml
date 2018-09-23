@@ -1,0 +1,38 @@
+---
+- name: Prerequisites for Kubernetes commands
+  pip: name=openshift state=present
+- name: Kubernetes config directory
+  file:
+    path: /home/gitlab-runner/.kube
+    state: directory
+    owner: gitlab-runner
+    group: gitlab-runner
+    mode: 0755
+- name: Kubernetes CA cert
+  copy:
+    content: "{{ kubernetes_ca_cert }}"
+    dest: /home/gitlab-runner/.kube/ca.crt
+    owner: gitlab-runner
+    group: gitlab-runner
+    mode: 0644
+- name: Kubernetes client cert
+  copy:
+    content: "{{ kubernetes_client_cert }}"
+    dest: /home/gitlab-runner/.kube/client.crt
+    owner: gitlab-runner
+    group: gitlab-runner
+    mode: 0600
+- name: Kubernetes client key
+  copy:
+    content: "{{ kubernetes_client_key }}"
+    dest: /home/gitlab-runner/.kube/client.key
+    owner: gitlab-runner
+    group: gitlab-runner
+    mode: 0600
+- name: Kubernetes config
+  template:
+    src: config
+    dest: /home/gitlab-runner/.kube/config
+    owner: gitlab-runner
+    group: gitlab-runner
+    mode: 0600

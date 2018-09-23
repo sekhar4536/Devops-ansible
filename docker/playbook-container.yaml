@@ -1,0 +1,33 @@
+- hosts: all
+  connection: local
+  tasks:
+    - name: postgresql persistent volume
+      docker_volume:
+        name: todo_data
+    - name: todo network
+      docker_network:
+        name: todo
+    - name: postgresql container
+      docker_container:
+        name: tododb
+        state: started
+        image: postgres:10.4
+        volumes:
+          - todo_data:/data
+        env:
+          PGDATA: /data/pgdata
+          POSTGRES_USER: "{{ postgresql_user }}"
+          POSTGRES_PASSWORD: "{{ postgresql_password }}"
+        networks:
+          - name: todo
+    - name: todo container
+      docker_container:
+        name: todo
+        state: started
+        image: alanhohn/todo
+        env:
+          DATABASE_URL: "{{ todo_database_url }}"
+        networks:
+          - name: todo
+        published_ports:
+          - "5000:5000"

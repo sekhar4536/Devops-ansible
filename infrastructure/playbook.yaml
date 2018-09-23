@@ -1,0 +1,13 @@
+- hosts: gitlab-ce
+  become: yes
+  roles:
+    - geerlingguy.gitlab
+- hosts: gitlab-runner
+  become: yes
+  roles:
+    - riemers.gitlab-runner
+    - geerlingguy.nodejs
+    - geerlingguy.docker
+    - andrewrothstein.kubectl
+    - gitlab-runner-config
+    - kubernetes-config

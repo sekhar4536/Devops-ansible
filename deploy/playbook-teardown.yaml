@@ -1,0 +1,53 @@
+---
+- hosts: localhost
+  connection: local
+  vars:
+    - app: "todo"
+  tasks:
+    - name: get auto scaling groups
+      shell: aws autoscaling describe-auto-scaling-groups
+      register: asg_output
+      changed_when: False
+
+    - name: get instances in auto scaling groups
+      shell: aws autoscaling describe-auto-scaling-instances
+      register: asg_instances_output
+      changed_when: False
+
+    - name: setup facts
+      set_fact:
+        current_lc: null
+        current_asg: null
+
+    - name: find all matching asgs
+      set_fact:
+        asg_list: "{{ (asg_output.stdout
+                        | from_json)['AutoScalingGroups']
+                        | selectattr('AutoScalingGroupName', 'equalto', app)
+                        | list }}"
+
+    - name: find current asg
+      set_fact:
+        current_asg: "{{ (asg_list | first)['AutoScalingGroupName'] }}"
+        current_lc: "{{ (asg_list | first)['LaunchConfigurationName'] }}"
+      when: asg_list | length > 0
+
+    - name: load balancer
+      ec2_elb_lb:
+        name: "{{ app }}"
+        state: absent
+        region: "{{ aws_region }}"
+
+    - name: auto scaling group
+      ec2_asg:
+        name: "{{ current_asg }}"
+        region: "{{ aws_region }}"
+        state: absent
+      when: current_asg is defined
+
+    - name: launch config
+      ec2_lc:
+        name: "{{ current_lc }}"
+        region: "{{ aws_region }}"
+        state: absent
+      when: current_lc is defined

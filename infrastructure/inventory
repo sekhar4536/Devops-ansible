@@ -1,0 +1,5 @@
+[gitlab-ce]
+gitlab
+
+[gitlab-runner]
+gitlab

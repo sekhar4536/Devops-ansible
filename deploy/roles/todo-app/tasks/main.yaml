@@ -1,0 +1,44 @@
+---
+- name: target directory
+  file:
+    path: /app
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: copy application
+  synchronize:
+    src: "{{ todo_app_source }}"
+    dest: /app
+    rsync_opts:
+      - "--exclude=.git"
+      - "--exclude=.env"
+      - "--exclude=bower_components"
+      - "--exclude=node_modules"
+      - "--exclude=public/js/vendor"
+      - "--exclude=public/css/vendor"
+
+- name: npm install
+  npm:
+    path: /app
+
+- name: grunt
+  command: npm run grunt chdir=/app warn=no
+
+- name: service file
+  template:
+    dest: /lib/systemd/system/todo.service
+    src: todo.service
+    mode: 0644
+    owner: root
+    group: root
+  when: deploy_todo_service
+  notify:
+    - todo reload systemd
+
+- meta: flush_handlers
+
+- name: service
+  service: name=todo state=started enabled=yes
+  when: deploy_todo_service

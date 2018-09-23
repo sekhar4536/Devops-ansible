@@ -1,0 +1,24 @@
+---
+- name: Prerequisite for pip command
+  package: name=python3-pip state=present
+- name: Install Ansible
+  pip: name=ansible state=present
+- name: Prerequisites for docker modules
+  pip: name=docker-py state=present
+- name: Prerequisites for aws modules
+  pip: name=boto state=present
+- name: Add gitlab-runner user to docker group
+  user: name=gitlab-runner
+        groups=docker
+        append=yes
+- name: Log gitlab-runner into DockerHub
+  become: yes
+  become_user: gitlab-runner
+  docker_login:
+    username: "{{ docker_user }}"
+    password: "{{ docker_password }}"
+    email: "{{ docker_email }}"
+- name: install packer
+  package: name=packer state=present
+- name: install jq
+  package: name=jq state=present

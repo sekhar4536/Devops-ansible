@@ -1,0 +1,11 @@
+kind: Service
+apiVersion: v1
+namespace: default
+metadata:
+  name: tododb
+spec:
+  selector:
+    app: tododb
+  ports:
+  - protocol: TCP
+    port: 5432

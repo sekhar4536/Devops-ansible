@@ -1,0 +1,47 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "ubuntu/xenial64"
+
+  config.vm.network "private_network", ip: "172.31.0.11"
+
+  config.vm.provider :virtualbox do |vb|
+    vb.memory = 2048
+    vb.cpus = 2
+  end
+
+  config.vm.provider :aws do |aws, override|
+    aws.region = "us-east-1"
+    aws.ami = "ami-aa2ea6d0"
+    aws.instance_type = "t2.small"
+    aws.keypair_name = "aws"
+    aws.subnet_id = "subnet-6153e817"
+    aws.associate_public_ip = true
+    aws.terminate_on_shutdown = true
+    aws.security_groups = ["sg-93af19eb", "sg-f0b8a284"]
+    aws.private_ip_address = "172.31.0.11"
+
+    override.vm.box = "dummy"
+    override.vm.synced_folder ".", "/vagrant", disabled: true
+    override.ssh.username = "ubuntu"
+    override.ssh.private_key_path = "~/.ssh/id_rsa_aws"
+  end
+
+  config.vm.provision "shell",
+    inline: "sudo apt-get update"
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.compatibility_mode = "2.0"
+    ansible.playbook = "playbook.yaml"
+    ansible.groups = {
+      "db" => ["default"],
+      "todo" => ["default"],
+      "test" => ["default"],
+      "todo:vars" => {"deploy_todo_service" => false}
+    }
+  end
+
+end

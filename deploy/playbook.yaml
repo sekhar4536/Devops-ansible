@@ -1,0 +1,20 @@
+---
+- hosts: db
+  become: yes
+  roles:
+    - postgresql
+- hosts: todo
+  become: yes
+  roles:
+    - geerlingguy.nodejs
+    - todo-app
+- hosts: test
+  become: yes
+  environment: "{{ test_environment }}"
+  tasks:
+    - name: db migrate
+      command: npm run prestart chdir=/app warn=no
+    - name: test
+      command: npm test chdir=/app warn=no
+      register: test_output
+    - debug: var=test_output.stdout_lines

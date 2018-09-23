@@ -1,0 +1,8 @@
+gitlab_runner_package_name: gitlab-runner
+gitlab_runner_coordinator_url: 'http://gitlab/'
+
+nodejs_version: '10.x'
+
+docker_apt_release_channel: edge
+
+kubernetes_server: https://192.168.99.100:8443

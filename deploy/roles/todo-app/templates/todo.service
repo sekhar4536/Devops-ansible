@@ -1,0 +1,14 @@
+[Unit]
+Description=Todo
+
+[Service]
+Type=simple
+Environment=NODE_ENV=production
+Environment=DATABASE_URL={{ todo_database_url }}
+WorkingDirectory=/app
+ExecStart=/usr/bin/npm start
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

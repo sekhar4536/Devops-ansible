@@ -1,0 +1,40 @@
+- hosts: all
+  connection: local
+  vars:
+    desired_state: present
+  tasks:
+    - name: deploy todo
+      docker_service:
+        project_name: todo
+        state: "{{ desired_state }}"
+        build: yes
+        definition:
+          version: '3.3'
+          volumes:
+            todo_data:
+          services:
+            tododb:
+              image: postgres:10.4
+              environment:
+                PGDATA: /data/pgdata
+                POSTGRES_USER: "{{ postgresql_user }}"
+                POSTGRES_PASSWORD: "{{ postgresql_password }}"
+              volumes:
+                - "todo_data:/data"
+            todo:
+              build: "{{ todo_app_source }}"
+              environment:
+                DATABASE_URL: "{{ todo_database_url }}"
+              ports:
+                - "5000:5000"
+              depends_on:
+                - tododb
+      register: output
+
+    - debug: var=output
+
+    - assert:
+        that:
+          - "tododb.todo_tododb_1.state.running"
+          - "todo.todo_todo_1.state.running"
+      when: desired_state == "present"

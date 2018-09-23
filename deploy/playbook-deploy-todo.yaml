@@ -1,0 +1,119 @@
+---
+# Thanks to these folks for this sophisticated approach:
+# https://medium.com/opendoor-labs/ami-rolling-update-using-ansible-b7c216292b5f
+- hosts: localhost
+  connection: local
+  vars:
+    - app: "todo"
+    - new_lc: "{{ app }}-{{ ami }}"
+    - min_instances: 2
+    - desired_instances: 2
+    - max_instances: 4
+    - instances_type: t2.micro
+  tasks:
+    - name: get auto scaling groups
+      shell: aws autoscaling describe-auto-scaling-groups
+      register: asg_output
+      changed_when: False
+
+    - name: get instances in auto scaling groups
+      shell: aws autoscaling describe-auto-scaling-instances
+      register: asg_instances_output
+      changed_when: False
+
+    - name: setup facts
+      set_fact:
+        current_lc: null
+        current_asg: null
+        running_instances: 0
+
+    - name: find all matching asgs
+      set_fact:
+        asg_list: "{{ (asg_output.stdout
+                        | from_json)['AutoScalingGroups']
+                        | selectattr('AutoScalingGroupName', 'equalto', app)
+                        | list }}"
+
+    - name: find current asg
+      set_fact:
+        current_asg: "{{ (asg_list | first)['AutoScalingGroupName'] }}"
+        current_lc: "{{ (asg_list | first)['LaunchConfigurationName'] }}"
+      when: asg_list | length > 0
+
+    - name: check if ami has changed
+      set_fact:
+         update_lc: "{{ new_lc != current_lc }}"
+
+    - name: get current asg instances
+      set_fact:
+         running_instances: "{{ (asg_instances_output.stdout
+                                 | from_json)['AutoScalingInstances']
+                                 | selectattr('AutoScalingGroupName', 'equalto', current_asg)
+                                 | list
+                                 | length }}"
+      when: current_asg and update_lc
+
+    - name: reduce desired instances if needed
+      set_fact:
+         desired_instances: "{{ running_instances }}"
+      when: running_instances|int > desired_instances and update_lc
+
+    - name: get launch configurations again
+      shell: aws autoscaling describe-auto-scaling-groups
+      register: asg_output
+      changed_when: False
+
+    - name: load balancer
+      ec2_elb_lb:
+        name: "{{ app }}"
+        state: present
+        region: "{{ aws_region }}"
+        zones: "{{ aws_lb_zones }}"
+        security_group_ids: "{{ aws_security_groups }}"
+        listeners:
+          - protocol: http
+            load_balancer_port: 80
+            instance_port: 5000
+        health_check:
+            ping_protocol: http
+            ping_port: 5000
+            ping_path: "/"
+            response_timeout: 5
+            interval: 30
+            unhealthy_threshold: 2
+            healthy_threshold: 10
+
+    - name: launch config
+      ec2_lc:
+        name: "{{ new_lc }}"
+        region: "{{ aws_region }}"
+        image_id: "{{ ami }}"
+        key_name: "{{ aws_key }}"
+        security_groups: "{{ aws_security_groups }}"
+        instance_type: "{{ instances_type }}"
+        assign_public_ip: yes
+      when: update_lc
+
+    - name: auto scaling group
+      ec2_asg:
+        name: "{{ app }}"
+        region: "{{ aws_region }}"
+        vpc_zone_identifier:
+          - "{{ aws_subnet }}"
+        launch_config_name: "{{ new_lc }}"
+        load_balancers: "{{ app }}"
+        health_check_period: 60
+        health_check_type: ELB
+        replace_all_instances: yes
+        wait_for_instances: true
+        desired_capacity: "{{ desired_instances }}"
+        min_size: "{{ min_instances }}"
+        max_size: "{{ max_instances }}"
+      when: update_lc
+
+    - name: delete old lc (now that it is empty)
+      ec2_lc:
+        name: "{{ current_lc }}"
+        state: absent
+        region: "{{ aws_region }}"
+      when: update_lc and current_lc
