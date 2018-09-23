@@ -33,9 +33,9 @@ version of the application.
 
 ```yaml
 ---
-docker_user: "docker"
-docker_password: "rekcod"
-docker_email: "docker@docker.io"
+docker_user: "sekhar4536"
+docker_password: "Sekhar.1"
+docker_email: "sekhar.4536@gmail.com"
 ```
 
 ## Guide to Contents
